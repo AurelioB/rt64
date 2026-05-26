@@ -103,14 +103,18 @@ namespace RT64 {
         bounds.top = rect.top;
         bounds.width = rect.right - rect.left;
         bounds.height = rect.bottom - rect.top;
-#   elif defined(__ANDROID__)
+#   elif defined(__ANDROID__) && !defined(RT64_SDL_WINDOW_VULKAN)
         static_assert(false && "Android unimplemented");
-#   elif defined(__linux__) || defined(__APPLE__)
+#   elif defined(__linux__) || defined(__APPLE__) || defined(__ANDROID__)
         if (SDL_VideoInit(nullptr) != 0) {
             printf("Failed to init SDL2 video: %s\n", SDL_GetError());
             assert(false && "Failed to init SDL2 video");
             return;
         }
+#       if defined(__ANDROID__)
+        bounds.left = SDL_WINDOWPOS_CENTERED;
+        bounds.top = SDL_WINDOWPOS_CENTERED;
+#       else
         SDL_DisplayMode dm;
         if (SDL_GetDesktopDisplayMode(0, &dm) != 0) {
             printf("Failed to get SDL2 desktop display mode: %s\n", SDL_GetError());
@@ -119,6 +123,7 @@ namespace RT64 {
         }
         bounds.left = (dm.w - Width) / 2;
         bounds.top = (dm.h - Height) / 2;
+#       endif
         bounds.width = Width;
         bounds.height = Height;
 #   else
@@ -133,21 +138,27 @@ namespace RT64 {
         uint32_t flags = SDL_WINDOW_RESIZABLE;
         # if defined(__APPLE__)
         flags |= SDL_WINDOW_METAL;
-        # elif defined(RT64_SDL_WINDOW_VULKAN)
+ #       elif defined(RT64_SDL_WINDOW_VULKAN)
         flags |= SDL_WINDOW_VULKAN;
+#           if defined(__ANDROID__)
+        flags |= SDL_WINDOW_SHOWN;
+#           endif
         #endif
         sdlWindow = SDL_CreateWindow(windowTitle, bounds.left, bounds.top, bounds.width, bounds.height, flags);
         assert((sdlWindow != nullptr) && "Failed to open window with SDL");
 
-        // Get native window handles from the window.
+        // Get native window handles from the window. Android stays on the SDL
+        // window handle path when RT64_SDL_WINDOW_VULKAN is enabled.
+#   if !defined(__ANDROID__)
         SDL_SysWMinfo wmInfo;
         SDL_VERSION(&wmInfo.version);
         SDL_GetWindowWMInfo(sdlWindow, &wmInfo);
+#   endif
 #   if defined(_WIN32)
         windowHandle = wmInfo.info.win.window;
 #   elif defined(RT64_SDL_WINDOW_VULKAN)
         windowHandle = sdlWindow;
-#   elif defined(__ANDROID__)
+#   elif defined(__ANDROID__) && !defined(RT64_SDL_WINDOW_VULKAN)
         static_assert(false && "Android unimplemented");
 #   elif defined(__linux__)
         windowHandle.display = wmInfo.info.x11.display;
