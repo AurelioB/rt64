@@ -256,16 +256,6 @@ namespace RT64 {
             }
         }
 
-        // Create the framebuffers if necessary.
-        if (swapChainFramebuffers.empty()) {
-            uint32_t textureCount = ext.swapChain->getTextureCount();
-            swapChainFramebuffers.resize(textureCount);
-            for (uint32_t i = 0; i < textureCount; i++) {
-                const RenderTexture *swapChainTexture = ext.swapChain->getTexture(i);
-                swapChainFramebuffers[i] = ext.device->createFramebuffer(RenderFramebufferDesc(&swapChainTexture, 1));
-            }
-        }
-        
         for (int32_t i = 0; i < framesToPresent; i++) {
             uint32_t frameCountersNextPresented = 0;
             if ((framesToPresent > 1) && (usingMSAA || (i > 0))) {
@@ -304,6 +294,24 @@ namespace RT64 {
             }
 
             if (presentFrame && swapChainValid) {
+                if (swapChainFramebuffers.size() < ext.swapChain->getTextureCount()) {
+                    swapChainFramebuffers.resize(ext.swapChain->getTextureCount());
+                }
+
+                if (swapChainIndex >= swapChainFramebuffers.size()) {
+                    swapChainValid = false;
+                    continue;
+                }
+
+                if (swapChainFramebuffers[swapChainIndex] == nullptr) {
+                    const RenderTexture *swapChainTexture = ext.swapChain->getTexture(swapChainIndex);
+                    swapChainFramebuffers[swapChainIndex] = ext.device->createFramebuffer(RenderFramebufferDesc(&swapChainTexture, 1));
+                    if (swapChainFramebuffers[swapChainIndex] == nullptr) {
+                        swapChainValid = false;
+                        continue;
+                    }
+                }
+
                 // Draw the framebuffer with the VI renderer.
                 RenderTexture *swapChainTexture = ext.swapChain->getTexture(swapChainIndex);
                 RenderFramebuffer *swapChainFramebuffer = swapChainFramebuffers[swapChainIndex].get();
