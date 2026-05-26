@@ -54,6 +54,14 @@ elseif (APPLE)
         set (DXC "DYLD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/dxc/lib/arm64:${ZLIB_PATH}" "${PROJECT_SOURCE_DIR}/src/contrib/dxc/bin/arm64/dxc-macos")
         set (SPIRVCROSS "DYLD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/spirv-cross/lib/arm64:$ENV{DYLD_LIBRARY_PATH}" "${PROJECT_SOURCE_DIR}/src/contrib/spirv-cross/bin/arm64/spirv-cross")
     endif()
+elseif (CMAKE_SYSTEM_NAME MATCHES "Android")
+    # Android is cross-compiled, but shader generation runs on the build host.
+    # Do not select DXC from the target architecture.
+    if (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
+        set (DXC "LD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/dxc/lib/x64" "${PROJECT_SOURCE_DIR}/src/contrib/dxc/bin/x64/dxc-linux")
+    else()
+        set (DXC "LD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/dxc/lib/arm64" "${PROJECT_SOURCE_DIR}/src/contrib/dxc/bin/arm64/dxc-linux")
+    endif()
 else()
     if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
         set (DXC "LD_LIBRARY_PATH=${PROJECT_SOURCE_DIR}/src/contrib/dxc/lib/x64" "${PROJECT_SOURCE_DIR}/src/contrib/dxc/bin/x64/dxc-linux")
@@ -71,10 +79,14 @@ add_subdirectory(src/contrib/re-spirv)
 add_subdirectory(src/contrib/nativefiledialog-extended)
 add_subdirectory(src/contrib/zstd/build/cmake)
 
-if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND RT64_SDL_WINDOW_VULKAN)
+if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android" AND RT64_SDL_WINDOW_VULKAN)
     set(PLUME_SDL_VULKAN_ENABLED TRUE)
 elseif (APPLE)
     set(PLUME_APPLE_RETINA_ENABLED OFF)
+endif()
+
+if(PLUME_SDL_VULKAN_ENABLED OR CMAKE_SYSTEM_NAME MATCHES "Android")
+    find_package(SDL2 REQUIRED)
 endif()
 
 add_subdirectory(src/contrib/plume)
@@ -298,7 +310,7 @@ add_compile_definitions(
     IMGUI_IMPL_VULKAN_NO_PROTOTYPES
 )
 
-if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND RT64_SDL_WINDOW_VULKAN)
+if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android" AND RT64_SDL_WINDOW_VULKAN)
     add_compile_definitions("PLUME_SDL_VULKAN_ENABLED")
     add_compile_definitions("RT64_SDL_WINDOW_VULKAN")
 endif()
