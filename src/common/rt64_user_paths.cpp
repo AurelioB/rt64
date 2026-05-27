@@ -4,7 +4,9 @@
 
 #include "rt64_user_paths.h"
 
-#if defined(__linux__)
+#if defined(__ANDROID__)
+#   include <SDL.h>
+#elif defined(__linux__)
 #   include <unistd.h>
 #   include <pwd.h>
 #elif defined(_WIN32)
@@ -32,6 +34,12 @@ namespace RT64 {
         }
 
         CoTaskMemFree(knownPath);
+#   elif defined(__ANDROID__)
+        const char *internalStoragePath = SDL_AndroidGetInternalStoragePath();
+        if (internalStoragePath != nullptr) {
+            const std::string appDirName = std::string(".") + std::string(appId.c_str());
+            resultPath = std::filesystem::path{ internalStoragePath } / appDirName;
+        }
 #   elif defined(__linux__) || defined(__APPLE__)
         const char *homeDir = getenv("HOME");
         if (homeDir == nullptr) {

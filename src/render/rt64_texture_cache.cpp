@@ -1515,7 +1515,9 @@ namespace RT64 {
                 if (fileSystems[i]->load(ReplacementDatabaseFilename, databaseBytes)) {
                     try {
                         ReplacementDatabase db;
-                        db = json::parse(databaseBytes.begin(), databaseBytes.end(), nullptr, true);
+                        db = json::parse(reinterpret_cast<const char *>(databaseBytes.data()),
+                                         reinterpret_cast<const char *>(databaseBytes.data() + databaseBytes.size()),
+                                         nullptr, true);
 
                         if (db.config.hashVersion <= TMEMHasher::CurrentHashVersion) {
                             db.resolvePaths(fileSystems[i].get(), uint32_t(i), fileSystemResolvedPaths[i], false, nullptr, &fileSystemStreamSets[i]);
