@@ -638,8 +638,15 @@ namespace RT64 {
             curFogIndex = 0;
         }
 
+#if defined(__ANDROID__)
+        // Some BMHero display lists use G_TEXTURE_GEN for hilite/environment effects
+        // without also enabling G_LIGHTING. Treat texture-gen as active on its own so
+        // those effects don't need fake lighting state that changes their intensity.
+        const bool usesTextureGen = (geometryMode & G_TEXTURE_GEN) != 0;
+#else
         const uint32_t textureGenMask = G_LIGHTING | G_TEXTURE_GEN;
         const bool usesTextureGen = (geometryMode & textureGenMask) == textureGenMask;
+#endif
         if (usesTextureGen) {
             if (lookAtChanged) {
                 auto &rspLookAtVector = workload.drawData.rspLookAt;
