@@ -81,7 +81,13 @@ namespace RT64 {
         refreshRateTarget = 60;
         internalColorFormat = InternalColorFormat::Automatic;
         hardwareResolve = HardwareResolve::Automatic;
+#if defined(__ANDROID__)
+        // Android handhelds commonly already have device/vendor performance policy controlling clocks.
+        // Leave the high-performance idle workaround available, but do not enable its 1 ms keepalive work by default.
+        idleWorkActive = false;
+#else
         idleWorkActive = true;
+#endif
         developerMode = false;
     }
 
