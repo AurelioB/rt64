@@ -126,22 +126,22 @@ function(build_shader_spirv_impl TARGETOBJ FILENAME TARGET_NAME OUTNAME)
     add_custom_command(OUTPUT ${OUTNAME}.spv
         COMMAND ${DXC} ${DXC_SPV_OPTS} ${ARGN} ${FILENAME} /Fo ${OUTNAME}.spv
         DEPENDS ${FILENAME})
-    add_custom_command(OUTPUT ${OUTNAME}.spirv.c
+    add_custom_command(OUTPUT ${OUTNAME}.spirv.c ${OUTNAME}.spirv.h
         COMMAND file_to_c ${OUTNAME}.spv ${TARGET_NAME}BlobSPIRV ${OUTNAME}.spirv.c ${OUTNAME}.spirv.h
-        DEPENDS ${OUTNAME}.spv file_to_c
-        BYPRODUCTS ${OUTNAME}.spirv.h)
-    target_sources(${TARGETOBJ} PRIVATE ${OUTNAME}.spirv.c)
+        DEPENDS ${OUTNAME}.spv file_to_c)
+    set_property(GLOBAL APPEND PROPERTY RT64_GENERATED_SHADER_OUTPUTS ${OUTNAME}.spirv.c ${OUTNAME}.spirv.h)
+    target_sources(${TARGETOBJ} PRIVATE ${OUTNAME}.spirv.c ${OUTNAME}.spirv.h)
 endfunction()
 
 function(build_shader_dxil_impl TARGETOBJ FILENAME TARGET_NAME OUTNAME)
     add_custom_command(OUTPUT ${OUTNAME}.dxil
         COMMAND ${DXC} ${DXC_DXIL_OPTS} ${ARGN} ${FILENAME} /Fo ${OUTNAME}.dxil
         DEPENDS ${FILENAME})
-    add_custom_command(OUTPUT ${OUTNAME}.dxil.c
+    add_custom_command(OUTPUT ${OUTNAME}.dxil.c ${OUTNAME}.dxil.h
         COMMAND file_to_c ${OUTNAME}.dxil ${TARGET_NAME}BlobDXIL ${OUTNAME}.dxil.c ${OUTNAME}.dxil.h
-        DEPENDS ${OUTNAME}.dxil file_to_c
-        BYPRODUCTS ${OUTNAME}.dxil.h)
-    target_sources(${TARGETOBJ} PRIVATE ${OUTNAME}.dxil.c)
+        DEPENDS ${OUTNAME}.dxil file_to_c)
+    set_property(GLOBAL APPEND PROPERTY RT64_GENERATED_SHADER_OUTPUTS ${OUTNAME}.dxil.c ${OUTNAME}.dxil.h)
+    target_sources(${TARGETOBJ} PRIVATE ${OUTNAME}.dxil.c ${OUTNAME}.dxil.h)
 endfunction()
 
 function(build_shader_msl_impl TARGETOBJ FILENAME TARGET_NAME OUTNAME)
@@ -157,11 +157,11 @@ function(build_shader_msl_impl TARGETOBJ FILENAME TARGET_NAME OUTNAME)
     add_custom_command(OUTPUT ${OUTNAME}.metallib
             COMMAND xcrun -sdk macosx metallib ${OUTNAME}.ir -o ${OUTNAME}.metallib
             DEPENDS ${OUTNAME}.ir)
-    add_custom_command(OUTPUT ${OUTNAME}.metal.c
+    add_custom_command(OUTPUT ${OUTNAME}.metal.c ${OUTNAME}.metal.h
             COMMAND file_to_c ${OUTNAME}.metallib ${TARGET_NAME}BlobMSL ${OUTNAME}.metal.c ${OUTNAME}.metal.h
-            DEPENDS ${OUTNAME}.metallib file_to_c
-            BYPRODUCTS ${OUTNAME}.metal.h)
-    target_sources(${TARGETOBJ} PRIVATE ${OUTNAME}.metal.c)
+            DEPENDS ${OUTNAME}.metallib file_to_c)
+    set_property(GLOBAL APPEND PROPERTY RT64_GENERATED_SHADER_OUTPUTS ${OUTNAME}.metal.c ${OUTNAME}.metal.h)
+    target_sources(${TARGETOBJ} PRIVATE ${OUTNAME}.metal.c ${OUTNAME}.metal.h)
 endfunction()
 
 function(build_shader TARGETOBJ SHADERNAME OPTIONS)
@@ -251,12 +251,12 @@ function(preprocess_shader TARGETOBJ SHADERNAME)
     cmake_path(GET SHADERNAME STEM TARGET_NAME)
     cmake_path(GET OUTNAME PARENT_PATH OUTPUT_DIR)
     preprocess(${FILENAME} ${OUTNAME}.rw ${DXC_COMMON_OPTS})
-    add_custom_command(OUTPUT ${OUTNAME}.rw.c
+    add_custom_command(OUTPUT ${OUTNAME}.rw.c ${OUTNAME}.rw.h
         COMMAND file_to_c ${OUTNAME}.rw ${TARGET_NAME}Text ${OUTNAME}.rw.c ${OUTNAME}.rw.h
-        DEPENDS ${OUTNAME}.rw file_to_c
-        BYPRODUCTS ${OUTNAME}.rw.h)
+        DEPENDS ${OUTNAME}.rw file_to_c)
+    set_property(GLOBAL APPEND PROPERTY RT64_GENERATED_SHADER_OUTPUTS ${OUTNAME}.rw.c ${OUTNAME}.rw.h)
     file(MAKE_DIRECTORY ${OUTPUT_DIR})
-    target_sources(${TARGETOBJ} PRIVATE ${OUTNAME}.rw.c)
+    target_sources(${TARGETOBJ} PRIVATE ${OUTNAME}.rw.c ${OUTNAME}.rw.h)
 endfunction()
 
 function(build_library_shader TARGETOBJ SHADERNAME)
@@ -563,6 +563,12 @@ build_pixel_shader(  rt64 "src/shaders/ComposePS.hlsl")
 build_pixel_shader(  rt64 "src/shaders/DebugPS.hlsl")
 build_pixel_shader(  rt64 "src/shaders/Im3DPS.hlsl")
 build_pixel_shader(  rt64 "src/shaders/PostProcessPS.hlsl")
+
+get_property(RT64_GENERATED_SHADER_OUTPUTS GLOBAL PROPERTY RT64_GENERATED_SHADER_OUTPUTS)
+if (RT64_GENERATED_SHADER_OUTPUTS)
+    add_custom_target(rt64_generated_shader_outputs DEPENDS ${RT64_GENERATED_SHADER_OUTPUTS})
+    add_dependencies(rt64 rt64_generated_shader_outputs)
+endif()
 
 target_include_directories(rt64 PRIVATE ${CMAKE_BINARY_DIR}/src)
 
